@@ -8,3 +8,27 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+
+# Keep Bluetooth ESC/POS Printer library classes
+-keep class com.vardrz.reactnative.bluetoothescposprinter.** { *; }
+-keepclassmembers class com.vardrz.reactnative.bluetoothescposprinter.** { *; }
+
+# Keep Bluetooth related classes
+-keep class android.bluetooth.** { *; }
+-keep interface android.bluetooth.** { *; }
+
+# Keep React Native Bluetooth library
+-dontwarn com.vardrz.reactnative.bluetoothescposprinter.**
+
+# Keep native methods
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# Keep all React Native packages
+-keep class com.facebook.react.** { *; }
+-keep class com.facebook.hermes.** { *; }
+
+# Bluetooth printer specific
+-keep class net.posprinter.** { *; }
+-dontwarn net.posprinter.**
