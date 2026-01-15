@@ -84,6 +84,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        missingDimensionStrategy 'react-native-camera', 'general'
     }
     signingConfigs {
         debug {
@@ -110,6 +111,13 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+
+    // Force use of general flavor for react-native-camera
+    implementation(project(':react-native-camera')) {
+        exclude group: 'com.google.android.gms'
+        exclude group: 'com.google.mlkit'
+    }
+    implementation 'com.google.android.gms:play-services-vision:20.1.3'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
