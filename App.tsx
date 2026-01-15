@@ -1,9 +1,10 @@
-import {StatusBar, StyleSheet, useColorScheme} from 'react-native';
-import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {NavigationContainer} from '@react-navigation/native';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import { StatusBar, useColorScheme } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import PrinterComponent from './components/PrinterComponent';
-import QRScannerComponent from './components/QRScannerComponent';
+import QRScanner from './components/QRScanner';
 
 const Tab = createBottomTabNavigator();
 
@@ -24,12 +25,16 @@ function App() {
               borderTopWidth: 1,
               borderTopColor: '#eee',
             },
-          }}>
+          }}
+        >
           <Tab.Screen
             name="Scanner"
-            component={QRScannerComponent}
+            component={QRScanner}
             options={{
               tabBarLabel: 'Scan QR',
+              tabBarIcon: ({ color, size }) => (
+                <Icon name="qr-code-scanner" size={size} color={color} />
+              ),
             }}
           />
           <Tab.Screen
@@ -37,6 +42,9 @@ function App() {
             component={PrinterComponent}
             options={{
               tabBarLabel: 'Device Connect',
+              tabBarIcon: ({ color, size }) => (
+                <Icon name="bluetooth" size={size} color={color} />
+              ),
             }}
           />
         </Tab.Navigator>
@@ -44,11 +52,5 @@ function App() {
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export default App;
