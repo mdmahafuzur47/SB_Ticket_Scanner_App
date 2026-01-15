@@ -1,4 +1,4 @@
-import React, {useState, useRef} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
 import BluetoothPrinter from '@vardrz/react-native-bluetooth-escpos-printer';
 
 const BluetoothManager = BluetoothPrinter.BluetoothManager as any;
@@ -22,10 +21,11 @@ interface ApplicationDetailsProps {
   onClose: () => void;
 }
 
-const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) => {
+const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
+  data,
+  onClose,
+}) => {
   const [isPrinting, setIsPrinting] = useState(false);
-  const [connectedDevice, setConnectedDevice] = useState<any>(null);
-  const qrCodeRef = useRef<any>(null);
 
   if (!data) return null;
 
@@ -69,7 +69,10 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
     try {
       const hasPermission = await requestBluetoothPermissions();
       if (!hasPermission) {
-        Alert.alert('Permission Required', 'Bluetooth permissions are required to print.');
+        Alert.alert(
+          'Permission Required',
+          'Bluetooth permissions are required to print.',
+        );
         return null;
       }
 
@@ -83,7 +86,10 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
       const pairedDevices = pairedDevicesArray.paired || [];
 
       if (pairedDevices.length === 0) {
-        Alert.alert('No Devices', 'No paired Bluetooth devices found. Please pair your printer first.');
+        Alert.alert(
+          'No Devices',
+          'No paired Bluetooth devices found. Please pair your printer first.',
+        );
         return null;
       }
 
@@ -95,13 +101,13 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
       if (printer) {
         await BluetoothManager.connect(printer.address);
         await BluetoothEscposPrinter.printerInit();
-        setConnectedDevice(printer);
+
         return printer;
       } else {
         // Connect to first device
         await BluetoothManager.connect(pairedDevices[0].address);
         await BluetoothEscposPrinter.printerInit();
-        setConnectedDevice(pairedDevices[0]);
+
         return pairedDevices[0];
       }
     } catch (error) {
@@ -129,39 +135,59 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
       const interviewTime = data.schedule?.schedule?.time_formatted || 'N/A';
       const venue = data.schedule?.schedule?.venue?.name || 'N/A';
       const address = data.schedule?.schedule?.venue?.address || 'N/A';
-      const applicationId = data.application_id || 'N/A';
 
       // Print ticket
       await BluetoothEscposPrinter.printerInit();
-      await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.CENTER);
-      await BluetoothEscposPrinter.printText('================================\n', {});
+      await BluetoothEscposPrinter.printerAlign(
+        BluetoothEscposPrinter.ALIGN.CENTER,
+      );
+      await BluetoothEscposPrinter.printText(
+        '================================\n',
+        {},
+      );
       await BluetoothEscposPrinter.printText('INTERVIEW TICKET\n', {
         fonttype: 1,
         widthtimes: 1,
         heigthtimes: 1,
       });
-      await BluetoothEscposPrinter.printText('================================\n\n', {});
+      await BluetoothEscposPrinter.printText(
+        '================================\n\n',
+        {},
+      );
 
       // Print QR Code (if supported by printer)
-      await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.LEFT);
-      await BluetoothEscposPrinter.printText(`Job Position:\n`, {fonttype: 1});
+      await BluetoothEscposPrinter.printerAlign(
+        BluetoothEscposPrinter.ALIGN.LEFT,
+      );
+      await BluetoothEscposPrinter.printText(`Job Position:\n`, {
+        fonttype: 1,
+      });
       await BluetoothEscposPrinter.printText(`${jobTitle}\n\n`, {});
 
-      await BluetoothEscposPrinter.printText(`Candidate Name:\n`, {fonttype: 1});
+      await BluetoothEscposPrinter.printText(`Candidate Name:\n`, {
+        fonttype: 1,
+      });
       await BluetoothEscposPrinter.printText(`${candidateName}\n\n`, {});
       await BluetoothEscposPrinter.printText(`Phone: ${phone}\n`, {});
       await BluetoothEscposPrinter.printText(`Email: ${email}\n\n`, {});
 
-      await BluetoothEscposPrinter.printText(`Interview Schedule:\n`, {fonttype: 1});
+      await BluetoothEscposPrinter.printText(`Interview Schedule:\n`, {
+        fonttype: 1,
+      });
       await BluetoothEscposPrinter.printText(`Date: ${interviewDate}\n`, {});
       await BluetoothEscposPrinter.printText(`Time: ${interviewTime}\n\n`, {});
 
-      await BluetoothEscposPrinter.printText(`Venue:\n`, {fonttype: 1});
+      await BluetoothEscposPrinter.printText(`Venue:\n`, { fonttype: 1 });
       await BluetoothEscposPrinter.printText(`${venue}\n`, {});
       await BluetoothEscposPrinter.printText(`${address}\n\n`, {});
 
-      await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.CENTER);
-      await BluetoothEscposPrinter.printText('================================\n\n\n', {});
+      await BluetoothEscposPrinter.printerAlign(
+        BluetoothEscposPrinter.ALIGN.CENTER,
+      );
+      await BluetoothEscposPrinter.printText(
+        '================================\n\n\n',
+        {},
+      );
 
       Alert.alert('Success', 'Ticket printed successfully!');
     } catch (error) {
@@ -189,9 +215,18 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
             <InfoRow label="Application ID" value={data.application_id} />
             <InfoRow label="Status" value={data.status} badge />
             <InfoRow label="Applied Date" value={formatDate(data.created_at)} />
-            <InfoRow label="SL No." value={data.job_application_sl?.toString()} />
-            <InfoRow label="Sortlisted" value={data.sortlisted ? 'Yes' : 'No'} />
-            <InfoRow label="Sortlist Date" value={formatDate(data.sortlist_date_formatted)} />
+            <InfoRow
+              label="SL No."
+              value={data.job_application_sl?.toString()}
+            />
+            <InfoRow
+              label="Sortlisted"
+              value={data.sortlisted ? 'Yes' : 'No'}
+            />
+            <InfoRow
+              label="Sortlist Date"
+              value={formatDate(data.sortlist_date_formatted)}
+            />
           </View>
         </View>
 
@@ -203,7 +238,7 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
               {data.user.candidate_image_url && (
                 <View style={styles.imageContainer}>
                   <Image
-                    source={{uri: data.user.candidate_image_url}}
+                    source={{ uri: data.user.candidate_image_url }}
                     style={styles.candidateImage}
                   />
                 </View>
@@ -216,7 +251,10 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
               <InfoRow label="Date of Birth" value={data.user.dob_formatted} />
               <InfoRow label="NID No" value={data.user.nid_no} />
               <InfoRow label="Institute" value={data.user.institute} />
-              <InfoRow label="Education" value={data.user.educational_qualification} />
+              <InfoRow
+                label="Education"
+                value={data.user.educational_qualification}
+              />
             </View>
           </View>
         )}
@@ -228,16 +266,31 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
             <View style={styles.card}>
               <InfoRow label="Job Title" value={data.job.title} />
               <InfoRow label="Vacancy Code" value={data.job.vacancy_code} />
-              <InfoRow label="Total Vacancy" value={data.job.total_vacancy?.toString()} />
+              <InfoRow
+                label="Total Vacancy"
+                value={data.job.total_vacancy?.toString()}
+              />
               <InfoRow label="Basic Salary" value={data.job.basic_salary} />
-              <InfoRow label="Contract Length" value={data.job.contract_length} />
-              <InfoRow label="Experience Required" value={data.job.experience} />
+              <InfoRow
+                label="Contract Length"
+                value={data.job.contract_length}
+              />
+              <InfoRow
+                label="Experience Required"
+                value={data.job.experience}
+              />
               <InfoRow label="Min Age" value={data.job.min_age} />
               <InfoRow label="Max Age" value={data.job.max_age} />
               <InfoRow label="Qualification" value={data.job.qualification} />
               <InfoRow label="Language" value={data.job.language} />
-              <InfoRow label="Interview Date" value={formatDate(data.job.interview_date_formatted)} />
-              <InfoRow label="Expiry Date" value={formatDate(data.job.expiry_date_formatted)} />
+              <InfoRow
+                label="Interview Date"
+                value={formatDate(data.job.interview_date_formatted)}
+              />
+              <InfoRow
+                label="Expiry Date"
+                value={formatDate(data.job.expiry_date_formatted)}
+              />
             </View>
           </View>
         )}
@@ -249,10 +302,22 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
             <InfoRow label="Last Company" value={data.last_company} />
             <InfoRow label="Last Position" value={data.last_position} />
             <InfoRow label="Experience Info" value={data.experience_info} />
-            <InfoRow label="Bangladeshi Experience" value={`${data.bangladeshi_exp} years`} />
-            <InfoRow label="Overseas Experience" value={`${data.overseas_exp} years`} />
-            <InfoRow label="Current Salary" value={data.current_salary?.toString()} />
-            <InfoRow label="Expected Salary" value={data.expected_salary?.toString()} />
+            <InfoRow
+              label="Bangladeshi Experience"
+              value={`${data.bangladeshi_exp} years`}
+            />
+            <InfoRow
+              label="Overseas Experience"
+              value={`${data.overseas_exp} years`}
+            />
+            <InfoRow
+              label="Current Salary"
+              value={data.current_salary?.toString()}
+            />
+            <InfoRow
+              label="Expected Salary"
+              value={data.expected_salary?.toString()}
+            />
           </View>
         </View>
 
@@ -262,18 +327,45 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
             <Text style={styles.sectionTitle}>Interview Schedule</Text>
             <View style={styles.card}>
               <InfoRow label="Status" value={data.schedule.status} badge />
-              <InfoRow label="Date" value={formatDate(data.schedule.schedule?.date_formatted)} />
-              <InfoRow label="Time" value={data.schedule.schedule?.time_formatted} />
+              <InfoRow
+                label="Date"
+                value={formatDate(data.schedule.schedule?.date_formatted)}
+              />
+              <InfoRow
+                label="Time"
+                value={data.schedule.schedule?.time_formatted}
+              />
               <InfoRow label="Type" value={data.schedule.schedule?.type} />
-              <InfoRow label="Contact Number" value={data.schedule.schedule?.contact_number} />
+              <InfoRow
+                label="Contact Number"
+                value={data.schedule.schedule?.contact_number}
+              />
               {data.schedule.schedule?.venue && (
                 <>
-                  <InfoRow label="Venue" value={data.schedule.schedule.venue.name} />
-                  <InfoRow label="Address" value={data.schedule.schedule.venue.address} />
+                  <InfoRow
+                    label="Venue"
+                    value={data.schedule.schedule.venue.name}
+                  />
+                  <InfoRow
+                    label="Address"
+                    value={data.schedule.schedule.venue.address}
+                  />
                 </>
               )}
-              <InfoRow label="Attendance" value={data.schedule.attendance || 'Not Marked'} />
-              <InfoRow label="Will Come" value={data.schedule.will_come === null ? 'Not Confirmed' : data.schedule.will_come ? 'Yes' : 'No'} />
+              <InfoRow
+                label="Attendance"
+                value={data.schedule.attendance || 'Not Marked'}
+              />
+              <InfoRow
+                label="Will Come"
+                value={
+                  data.schedule.will_come === null
+                    ? 'Not Confirmed'
+                    : data.schedule.will_come
+                    ? 'Yes'
+                    : 'No'
+                }
+              />
             </View>
           </View>
         )}
@@ -282,10 +374,22 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Interview Progress</Text>
           <View style={styles.card}>
-            <InfoRow label="Face to Face 1" value={data.ftf_one ? '✓ Passed' : '✗ Not Passed'} />
-            <InfoRow label="Face to Face 2" value={data.ftf_two ? '✓ Passed' : '✗ Not Passed'} />
-            <InfoRow label="Online Test" value={data.online_test ? '✓ Completed' : '✗ Not Completed'} />
-            <InfoRow label="Score" value={data.schedule?.score || 'Not Graded'} />
+            <InfoRow
+              label="Face to Face 1"
+              value={data.ftf_one ? '✓ Passed' : '✗ Not Passed'}
+            />
+            <InfoRow
+              label="Face to Face 2"
+              value={data.ftf_two ? '✓ Passed' : '✗ Not Passed'}
+            />
+            <InfoRow
+              label="Online Test"
+              value={data.online_test ? '✓ Completed' : '✗ Not Completed'}
+            />
+            <InfoRow
+              label="Score"
+              value={data.schedule?.score || 'Not Graded'}
+            />
           </View>
         </View>
 
@@ -312,7 +416,9 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
           {isPrinting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.printButtonText}>🖨️ Print Interview Ticket</Text>
+            <Text style={styles.printButtonText}>
+              🖨️ Print Interview Ticket
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -320,14 +426,28 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
   );
 };
 
-const InfoRow = ({label, value, badge}: {label: string; value: string; badge?: boolean}) => {
+const InfoRow = ({
+  label,
+  value,
+  badge,
+}: {
+  label: string;
+  value: string;
+  badge?: boolean;
+}) => {
   if (!value || value === 'null' || value === 'undefined') return null;
-  
+
   return (
     <View style={styles.infoRow}>
       <Text style={styles.label}>{label}:</Text>
       {badge ? (
-        <View style={[styles.badge, value === 'viewed' && styles.badgeViewed, value === 'notified' && styles.badgeNotified]}>
+        <View
+          style={[
+            styles.badge,
+            value === 'viewed' && styles.badgeViewed,
+            value === 'notified' && styles.badgeNotified,
+          ]}
+        >
           <Text style={styles.badgeText}>{value}</Text>
         </View>
       ) : (
@@ -387,7 +507,7 @@ const styles = StyleSheet.create({
     padding: 16,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
   },
@@ -469,7 +589,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e0e0e0',
     elevation: 10,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: -2},
+    shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
@@ -480,7 +600,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 3,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
