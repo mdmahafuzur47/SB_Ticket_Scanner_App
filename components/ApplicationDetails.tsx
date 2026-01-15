@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,10 @@ import {
   Image,
   TouchableOpacity,
   Alert,
-  PermissionsAndroid,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
-import BluetoothPrinter from '@vardrz/react-native-bluetooth-escpos-printer';
 
-const BluetoothManager = BluetoothPrinter.BluetoothManager as any;
-const BluetoothEscposPrinter = BluetoothPrinter.BluetoothEscposPrinter as any;
+import PrinterService from '../services/PrinterService';
 
 interface ApplicationDetailsProps {
   data: any;
@@ -26,6 +22,23 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
   onClose,
 }) => {
   const [isPrinting, setIsPrinting] = useState(false);
+  const [connectedDevice, setConnectedDevice] = useState<any>(null);
+
+  useEffect(() => {
+    // Get initial connection status
+    const device = PrinterService.getConnectedDevice();
+    setConnectedDevice(device);
+
+    // Listen for connection changes
+    const listener = (device: any) => {
+      setConnectedDevice(device);
+    };
+    PrinterService.addConnectionListener(listener);
+
+    return () => {
+      PrinterService.removeConnectionListener(listener);
+    };
+  }, []);
 
   if (!data) return null;
 
@@ -33,99 +46,18 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
     return dateString || 'N/A';
   };
 
-  const requestBluetoothPermissions = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const apiLevel = Platform.Version;
-
-        if (apiLevel >= 31) {
-          const granted = await PermissionsAndroid.requestMultiple([
-            PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-            PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          ]);
-
-          return (
-            granted['android.permission.BLUETOOTH_CONNECT'] ===
-              PermissionsAndroid.RESULTS.GRANTED &&
-            granted['android.permission.BLUETOOTH_SCAN'] ===
-              PermissionsAndroid.RESULTS.GRANTED
-          );
-        } else {
-          const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          );
-          return granted === PermissionsAndroid.RESULTS.GRANTED;
-        }
-      } catch (err) {
-        console.warn(err);
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const connectToPrinter = async () => {
-    try {
-      const hasPermission = await requestBluetoothPermissions();
-      if (!hasPermission) {
-        Alert.alert(
-          'Permission Required',
-          'Bluetooth permissions are required to print.',
-        );
-        return null;
-      }
-
-      const enabled = await BluetoothManager.isBluetoothEnabled();
-      if (!enabled) {
-        await BluetoothManager.enableBluetooth();
-      }
-
-      const devices = await BluetoothManager.scanDevices();
-      const pairedDevicesArray = JSON.parse(devices);
-      const pairedDevices = pairedDevicesArray.paired || [];
-
-      if (pairedDevices.length === 0) {
-        Alert.alert(
-          'No Devices',
-          'No paired Bluetooth devices found. Please pair your printer first.',
-        );
-        return null;
-      }
-
-      // Try to find XP-P210 or let user choose
-      const printer = pairedDevices.find((d: any) =>
-        d.name?.toLowerCase().includes('p210'),
-      );
-
-      if (printer) {
-        await BluetoothManager.connect(printer.address);
-        await BluetoothEscposPrinter.printerInit();
-
-        return printer;
-      } else {
-        // Connect to first device
-        await BluetoothManager.connect(pairedDevices[0].address);
-        await BluetoothEscposPrinter.printerInit();
-
-        return pairedDevices[0];
-      }
-    } catch (error) {
-      console.error('Connection error:', error);
-      Alert.alert('Connection Error', `Failed to connect to printer: ${error}`);
-      return null;
-    }
-  };
-
   const printTicket = async () => {
+    // Check if printer is connected
+    if (!PrinterService.isConnected()) {
+      Alert.alert(
+        'Not Connected',
+        'Please connect to a printer first from the Printer tab.',
+      );
+      return;
+    }
+
     setIsPrinting(true);
     try {
-      const device = await connectToPrinter();
-      if (!device) {
-        setIsPrinting(false);
-        return;
-      }
-
       // Get ticket data
       const jobTitle = data.job?.title || 'N/A';
       const candidateName = data.user?.full_name || 'N/A';
@@ -133,61 +65,38 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
       const email = data.user?.email || 'N/A';
       const interviewDate = data.schedule?.schedule?.date_formatted || 'N/A';
       const interviewTime = data.schedule?.schedule?.time_formatted || 'N/A';
-      const venue = data.schedule?.schedule?.venue?.name || 'N/A';
-      const address = data.schedule?.schedule?.venue?.address || 'N/A';
 
-      // Print ticket
-      await BluetoothEscposPrinter.printerInit();
-      await BluetoothEscposPrinter.printerAlign(
-        BluetoothEscposPrinter.ALIGN.CENTER,
-      );
-      await BluetoothEscposPrinter.printText(
-        '================================\n',
-        {},
-      );
-      await BluetoothEscposPrinter.printText('INTERVIEW TICKET\n', {
-        fonttype: 1,
-        widthtimes: 1,
-        heigthtimes: 1,
-      });
-      await BluetoothEscposPrinter.printText(
-        '================================\n\n',
-        {},
-      );
+      // Initialize printer first
+      await PrinterService.initPrinter();
 
-      // Print QR Code (if supported by printer)
-      await BluetoothEscposPrinter.printerAlign(
-        BluetoothEscposPrinter.ALIGN.LEFT,
-      );
-      await BluetoothEscposPrinter.printText(`Job Position:\n`, {
-        fonttype: 1,
-      });
-      await BluetoothEscposPrinter.printText(`${jobTitle}\n\n`, {});
+      // Print in separate commands to avoid buffer issues
+      
+      // Header
+      await PrinterService.printText('\x1B\x61\x01', {}); // Center align
+      await PrinterService.printText('================================\n', {});
+      await PrinterService.printText('INTERVIEW TICKET\n', {});
+      await PrinterService.printText('================================\n\n', {});
 
-      await BluetoothEscposPrinter.printText(`Candidate Name:\n`, {
-        fonttype: 1,
-      });
-      await BluetoothEscposPrinter.printText(`${candidateName}\n\n`, {});
-      await BluetoothEscposPrinter.printText(`Phone: ${phone}\n`, {});
-      await BluetoothEscposPrinter.printText(`Email: ${email}\n\n`, {});
+      // Job Position
+      await PrinterService.printText('\x1B\x61\x00', {}); // Left align
+      await PrinterService.printText('Job Position:\n', {});
+      await PrinterService.printText(`${jobTitle}\n\n`, {});
 
-      await BluetoothEscposPrinter.printText(`Interview Schedule:\n`, {
-        fonttype: 1,
-      });
-      await BluetoothEscposPrinter.printText(`Date: ${interviewDate}\n`, {});
-      await BluetoothEscposPrinter.printText(`Time: ${interviewTime}\n\n`, {});
+      // Candidate Info
+      await PrinterService.printText('Candidate Name:\n', {});
+      await PrinterService.printText(`${candidateName}\n\n`, {});
+      await PrinterService.printText(`Phone: ${phone}\n`, {});
+      await PrinterService.printText(`Email: ${email}\n\n`, {});
 
-      await BluetoothEscposPrinter.printText(`Venue:\n`, { fonttype: 1 });
-      await BluetoothEscposPrinter.printText(`${venue}\n`, {});
-      await BluetoothEscposPrinter.printText(`${address}\n\n`, {});
+      // Interview Schedule
+      await PrinterService.printText('Interview Schedule:\n', {});
+      await PrinterService.printText(`Date: ${interviewDate}\n`, {});
+      await PrinterService.printText(`Time: ${interviewTime}\n\n`, {});
 
-      await BluetoothEscposPrinter.printerAlign(
-        BluetoothEscposPrinter.ALIGN.CENTER,
-      );
-      await BluetoothEscposPrinter.printText(
-        '================================\n\n\n',
-        {},
-      );
+      // Footer
+      await PrinterService.printText('\x1B\x61\x01', {}); // Center align
+      await PrinterService.printText('================================\n', {});
+      await PrinterService.printText('\n\n\n\n', {}); // Extra line feeds
 
       Alert.alert('Success', 'Ticket printed successfully!');
     } catch (error) {
@@ -408,19 +317,38 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
 
       {/* Fixed Print Button */}
       <View style={styles.printButtonContainer}>
-        <TouchableOpacity
-          style={[styles.printButton, isPrinting && styles.printButtonDisabled]}
-          onPress={printTicket}
-          disabled={isPrinting}
-        >
-          {isPrinting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.printButtonText}>
-              🖨️ Print Interview Ticket
+        {connectedDevice ? (
+          <View style={styles.connectedInfo}>
+            <Text style={styles.connectedText}>
+              ✓ Connected to: {connectedDevice.name || 'Printer'}
             </Text>
-          )}
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.printButton,
+                isPrinting && styles.printButtonDisabled,
+              ]}
+              onPress={printTicket}
+              disabled={isPrinting}
+            >
+              {isPrinting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.printButtonText}>
+                  🖨️ Print Interview Ticket
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.notConnectedInfo}>
+            <Text style={styles.notConnectedText}>
+              ⚠️ Printer not connected
+            </Text>
+            <Text style={styles.notConnectedSubText}>
+              Please connect to a printer from the Printer tab first
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -592,6 +520,30 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+  },
+  connectedInfo: {
+    gap: 10,
+  },
+  connectedText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  notConnectedInfo: {
+    padding: 10,
+    alignItems: 'center',
+  },
+  notConnectedText: {
+    fontSize: 14,
+    color: '#FF9800',
+    fontWeight: '600',
+    marginBottom: 5,
+  },
+  notConnectedSubText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
   },
   printButton: {
     backgroundColor: '#2196F3',

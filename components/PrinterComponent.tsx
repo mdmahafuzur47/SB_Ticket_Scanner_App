@@ -6,96 +6,55 @@ import {
   StyleSheet,
   FlatList,
   ScrollView,
-  PermissionsAndroid,
-  Platform,
 } from 'react-native';
 import React, { useEffect, useState } from 'react';
-import BluetoothPrinter from '@vardrz/react-native-bluetooth-escpos-printer';
-
-const BluetoothManager = BluetoothPrinter.BluetoothManager as any;
-const BluetoothEscposPrinter = BluetoothPrinter.BluetoothEscposPrinter as any;
+import PrinterService from '../services/PrinterService';
 
 const PrinterComponent = () => {
   const [pairedDevices, setPairedDevices] = useState<any[]>([]);
   const [connectedDevice, setConnectedDevice] = useState<any>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
-  // Get paired devices
+  // Get paired devices and connection status
   useEffect(() => {
-    requestBluetoothPermissions();
+    loadDevices();
+    
+    // Set initial connection state
+    const device = PrinterService.getConnectedDevice();
+    setConnectedDevice(device);
+
+    // Listen for connection changes
+    const listener = (device: any) => {
+      setConnectedDevice(device);
+    };
+    PrinterService.addConnectionListener(listener);
+
+    return () => {
+      PrinterService.removeConnectionListener(listener);
+    };
   }, []);
 
-  const requestBluetoothPermissions = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const apiLevel = Platform.Version;
-
-        if (apiLevel >= 31) {
-          // Android 12+ requires these permissions
-          const granted = await PermissionsAndroid.requestMultiple([
-            PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-            PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          ]);
-
-          if (
-            granted['android.permission.BLUETOOTH_CONNECT'] ===
-              PermissionsAndroid.RESULTS.GRANTED &&
-            granted['android.permission.BLUETOOTH_SCAN'] ===
-              PermissionsAndroid.RESULTS.GRANTED
-          ) {
-            getPairedDevices();
-          } else {
-            Alert.alert(
-              'Permissions Required',
-              'Bluetooth permissions are required to connect to the printer. Please grant permissions in Settings.',
-            );
-          }
-        } else {
-          // Android 11 and below
-          const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          );
-
-          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-            getPairedDevices();
-          } else {
-            Alert.alert(
-              'Permission Required',
-              'Location permission is required for Bluetooth functionality.',
-            );
-          }
-        }
-      } catch (err) {
-        console.warn(err);
-        Alert.alert('Error', 'Failed to request permissions');
-      }
-    } else {
-      getPairedDevices();
-    }
-  };
-
-  const getPairedDevices = async () => {
+  const loadDevices = async () => {
     try {
-      const enabled = await BluetoothManager.isBluetoothEnabled();
-      if (!enabled) {
-        const devices = await BluetoothManager.enableBluetooth();
-        setPairedDevices(devices || []);
-      } else {
-        // Scan for devices
-        const devices = await BluetoothManager.scanDevices();
-        const pairedDevicesArray = JSON.parse(devices);
-        setPairedDevices(pairedDevicesArray.paired || []);
+      const hasPermission = await PrinterService.requestBluetoothPermissions();
+      if (!hasPermission) {
+        Alert.alert(
+          'Permissions Required',
+          'Bluetooth permissions are required to connect to the printer.',
+        );
+        return;
       }
+
+      const devices = await PrinterService.getPairedDevices();
+      setPairedDevices(devices);
     } catch (error) {
-      console.error('Bluetooth error:', error);
+      console.error('Load devices error:', error);
       Alert.alert(
         'Error',
         'Failed to get paired devices. Please make sure:\n' +
           '1. Bluetooth is turned on\n' +
           '2. Your printer is paired in Bluetooth settings\n' +
-          '3. Permissions are granted\n\n' +
-          `Error: ${error}`,
+          '3. Permissions are granted',
       );
     }
   };
@@ -103,23 +62,14 @@ const PrinterComponent = () => {
   const connectToDevice = async (device: any) => {
     setIsConnecting(true);
     try {
-      await BluetoothManager.connect(device.address);
-      setConnectedDevice(device);
-
-      // Verify connection by checking if device is connected
-      const isConnected = await BluetoothManager.isBluetoothEnabled();
-      if (isConnected) {
-        // Initialize printer
-        await BluetoothEscposPrinter.printerInit();
-        Alert.alert('Success', `Connected to ${device.name || device.address}`);
-      }
+      await PrinterService.connectToPrinter(device);
+      Alert.alert('Success', `Connected to ${device.name || device.address}`);
     } catch (error) {
       console.error('Connection error:', error);
       Alert.alert(
         'Error',
         `Failed to connect to ${device.name || device.address}\n${error}`,
       );
-      setConnectedDevice(null);
     } finally {
       setIsConnecting(false);
     }
@@ -127,8 +77,7 @@ const PrinterComponent = () => {
 
   const disconnectDevice = async () => {
     try {
-      await BluetoothManager.disconnect();
-      setConnectedDevice(null);
+      await PrinterService.disconnectFromPrinter();
       Alert.alert('Disconnected', 'Printer disconnected');
     } catch (error) {
       Alert.alert('Error', 'Failed to disconnect');
@@ -142,9 +91,9 @@ const PrinterComponent = () => {
     }
 
     try {
-      // Simple direct print test
-      await BluetoothEscposPrinter.printerInit();
-      // Send raw ESC/POS commands
+      await PrinterService.initPrinter();
+      
+      // Build print content
       const ESC = '\x1B';
       const text =
         ESC +
@@ -164,7 +113,7 @@ const PrinterComponent = () => {
         '================================\n' +
         'Thank you!\n\n\n\n';
 
-      await BluetoothEscposPrinter.printText(text, {});
+      await PrinterService.printText(text, {});
 
       Alert.alert('Success', 'Receipt sent! Check your printer.');
     } catch (error) {
@@ -196,7 +145,7 @@ const PrinterComponent = () => {
         <Text style={styles.title}>XP-P210 Printer</Text>
         <TouchableOpacity
           style={styles.refreshButton}
-          onPress={requestBluetoothPermissions}
+          onPress={loadDevices}
         >
           <Text style={styles.refreshButtonText}>Refresh Devices</Text>
         </TouchableOpacity>
