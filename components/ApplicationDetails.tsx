@@ -1,5 +1,21 @@
-import React from 'react';
-import {View, Text, StyleSheet, ScrollView, Image, TouchableOpacity} from 'react-native';
+import React, {useState, useRef} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+  Alert,
+  PermissionsAndroid,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
+import BluetoothPrinter from '@vardrz/react-native-bluetooth-escpos-printer';
+
+const BluetoothManager = BluetoothPrinter.BluetoothManager as any;
+const BluetoothEscposPrinter = BluetoothPrinter.BluetoothEscposPrinter as any;
 
 interface ApplicationDetailsProps {
   data: any;
@@ -7,10 +23,153 @@ interface ApplicationDetailsProps {
 }
 
 const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) => {
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [connectedDevice, setConnectedDevice] = useState<any>(null);
+  const qrCodeRef = useRef<any>(null);
+
   if (!data) return null;
 
   const formatDate = (dateString: string) => {
     return dateString || 'N/A';
+  };
+
+  const requestBluetoothPermissions = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const apiLevel = Platform.Version;
+
+        if (apiLevel >= 31) {
+          const granted = await PermissionsAndroid.requestMultiple([
+            PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+            PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          ]);
+
+          return (
+            granted['android.permission.BLUETOOTH_CONNECT'] ===
+              PermissionsAndroid.RESULTS.GRANTED &&
+            granted['android.permission.BLUETOOTH_SCAN'] ===
+              PermissionsAndroid.RESULTS.GRANTED
+          );
+        } else {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          );
+          return granted === PermissionsAndroid.RESULTS.GRANTED;
+        }
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const connectToPrinter = async () => {
+    try {
+      const hasPermission = await requestBluetoothPermissions();
+      if (!hasPermission) {
+        Alert.alert('Permission Required', 'Bluetooth permissions are required to print.');
+        return null;
+      }
+
+      const enabled = await BluetoothManager.isBluetoothEnabled();
+      if (!enabled) {
+        await BluetoothManager.enableBluetooth();
+      }
+
+      const devices = await BluetoothManager.scanDevices();
+      const pairedDevicesArray = JSON.parse(devices);
+      const pairedDevices = pairedDevicesArray.paired || [];
+
+      if (pairedDevices.length === 0) {
+        Alert.alert('No Devices', 'No paired Bluetooth devices found. Please pair your printer first.');
+        return null;
+      }
+
+      // Try to find XP-P210 or let user choose
+      const printer = pairedDevices.find((d: any) =>
+        d.name?.toLowerCase().includes('p210'),
+      );
+
+      if (printer) {
+        await BluetoothManager.connect(printer.address);
+        await BluetoothEscposPrinter.printerInit();
+        setConnectedDevice(printer);
+        return printer;
+      } else {
+        // Connect to first device
+        await BluetoothManager.connect(pairedDevices[0].address);
+        await BluetoothEscposPrinter.printerInit();
+        setConnectedDevice(pairedDevices[0]);
+        return pairedDevices[0];
+      }
+    } catch (error) {
+      console.error('Connection error:', error);
+      Alert.alert('Connection Error', `Failed to connect to printer: ${error}`);
+      return null;
+    }
+  };
+
+  const printTicket = async () => {
+    setIsPrinting(true);
+    try {
+      const device = await connectToPrinter();
+      if (!device) {
+        setIsPrinting(false);
+        return;
+      }
+
+      // Get ticket data
+      const jobTitle = data.job?.title || 'N/A';
+      const candidateName = data.user?.full_name || 'N/A';
+      const phone = data.user?.phone || 'N/A';
+      const email = data.user?.email || 'N/A';
+      const interviewDate = data.schedule?.schedule?.date_formatted || 'N/A';
+      const interviewTime = data.schedule?.schedule?.time_formatted || 'N/A';
+      const venue = data.schedule?.schedule?.venue?.name || 'N/A';
+      const address = data.schedule?.schedule?.venue?.address || 'N/A';
+      const applicationId = data.application_id || 'N/A';
+
+      // Print ticket
+      await BluetoothEscposPrinter.printerInit();
+      await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.CENTER);
+      await BluetoothEscposPrinter.printText('================================\n', {});
+      await BluetoothEscposPrinter.printText('INTERVIEW TICKET\n', {
+        fonttype: 1,
+        widthtimes: 1,
+        heigthtimes: 1,
+      });
+      await BluetoothEscposPrinter.printText('================================\n\n', {});
+
+      // Print QR Code (if supported by printer)
+      await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.LEFT);
+      await BluetoothEscposPrinter.printText(`Job Position:\n`, {fonttype: 1});
+      await BluetoothEscposPrinter.printText(`${jobTitle}\n\n`, {});
+
+      await BluetoothEscposPrinter.printText(`Candidate Name:\n`, {fonttype: 1});
+      await BluetoothEscposPrinter.printText(`${candidateName}\n\n`, {});
+      await BluetoothEscposPrinter.printText(`Phone: ${phone}\n`, {});
+      await BluetoothEscposPrinter.printText(`Email: ${email}\n\n`, {});
+
+      await BluetoothEscposPrinter.printText(`Interview Schedule:\n`, {fonttype: 1});
+      await BluetoothEscposPrinter.printText(`Date: ${interviewDate}\n`, {});
+      await BluetoothEscposPrinter.printText(`Time: ${interviewTime}\n\n`, {});
+
+      await BluetoothEscposPrinter.printText(`Venue:\n`, {fonttype: 1});
+      await BluetoothEscposPrinter.printText(`${venue}\n`, {});
+      await BluetoothEscposPrinter.printText(`${address}\n\n`, {});
+
+      await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.CENTER);
+      await BluetoothEscposPrinter.printText('================================\n\n\n', {});
+
+      Alert.alert('Success', 'Ticket printed successfully!');
+    } catch (error) {
+      console.error('Print error:', error);
+      Alert.alert('Print Error', `Failed to print ticket: ${error}`);
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   return (
@@ -142,6 +301,21 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({data, onClose}) 
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Fixed Print Button */}
+      <View style={styles.printButtonContainer}>
+        <TouchableOpacity
+          style={[styles.printButton, isPrinting && styles.printButtonDisabled]}
+          onPress={printTicket}
+          disabled={isPrinting}
+        >
+          {isPrinting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.printButtonText}>🖨️ Print Interview Ticket</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -270,8 +444,53 @@ const styles = StyleSheet.create({
     color: '#2196F3',
     textDecorationLine: 'underline',
   },
+  qrCodeContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  qrCodeLabel: {
+    marginTop: 15,
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
   bottomSpacer: {
-    height: 20,
+    height: 100,
+  },
+  printButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  printButton: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  printButtonDisabled: {
+    backgroundColor: '#9E9E9E',
+  },
+  printButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 

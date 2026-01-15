@@ -84,19 +84,7 @@ const QRScanner = () => {
             <Text style={styles.scanButtonText}>Open Camera & Scan</Text>
           </TouchableOpacity>
 
-          {scannedData ? // <View style={styles.resultContainer}>
-          //   {/* <Text style={styles.resultLabel}>Last Scanned QR Code:</Text>
-          //   <Text style={styles.resultText}>{scannedData}</Text>
-          //   {applicationData && (
-          //     <TouchableOpacity
-          //       style={styles.viewDetailsButton}
-          //       onPress={() => setShowDetails(true)}
-          //     >
-          //       <Text style={styles.viewDetailsButtonText}>View Details</Text>
-          //     </TouchableOpacity>
-          //   )} */}
-          // </View>
-          null : (
+          {scannedData ? null : (
             <Text style={styles.instructionText}>No QR code scanned yet</Text>
           )}
         </View>
