@@ -18,7 +18,7 @@ const PrinterComponent = () => {
   // Get paired devices and connection status
   useEffect(() => {
     loadDevices();
-    
+
     // Set initial connection state
     const device = PrinterService.getConnectedDevice();
     setConnectedDevice(device);
@@ -80,6 +80,7 @@ const PrinterComponent = () => {
       await PrinterService.disconnectFromPrinter();
       Alert.alert('Disconnected', 'Printer disconnected');
     } catch (error) {
+      console.log(error);
       Alert.alert('Error', 'Failed to disconnect');
     }
   };
@@ -92,30 +93,25 @@ const PrinterComponent = () => {
 
     try {
       await PrinterService.initPrinter();
-      
+
       // Build print content
-      const ESC = '\x1B';
-      const text =
-        ESC +
-        '@' + // Initialize printer
-        'TEST RECEIPT\n' +
-        '================================\n' +
-        'Date: ' +
-        new Date().toLocaleString() +
-        '\n' +
-        '--------------------------------\n' +
-        'Item              Qty    Price\n' +
-        '--------------------------------\n' +
-        'Test Item 1        2    $10.00\n' +
-        'Test Item 2        1     $5.00\n' +
-        '--------------------------------\n' +
-        'TOTAL:                  $15.00\n' +
-        '================================\n' +
-        'Thank you!\n\n\n\n';
+      await PrinterService.printText('\x1B\x61\x01', {}); // Center align
+      await PrinterService.printText('================================\n', {});
+      await PrinterService.printText('SKILLBRIDGE\n', {});
+      await PrinterService.printText(
+        '================================\n\n',
+        {},
+      );
 
-      await PrinterService.printText(text, {});
+      await PrinterService.printText('Maintenance\n', {});
+      await PrinterService.printText('This is a test print\n\n', {});
 
-      Alert.alert('Success', 'Receipt sent! Check your printer.');
+      await PrinterService.printText('================================\n', {});
+      await PrinterService.printText('Created by Mafuz\n', {});
+      await PrinterService.printText('================================\n', {});
+      await PrinterService.printText('\n\n\n\n', {}); // Extra line feeds
+
+      Alert.alert('Success', 'Test print sent! Check your printer.');
     } catch (error) {
       console.error('Print error:', error);
       Alert.alert('Print Error', `${error}`);
@@ -143,10 +139,7 @@ const PrinterComponent = () => {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>XP-P210 Printer</Text>
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={loadDevices}
-        >
+        <TouchableOpacity style={styles.refreshButton} onPress={loadDevices}>
           <Text style={styles.refreshButtonText}>Refresh Devices</Text>
         </TouchableOpacity>
       </View>
