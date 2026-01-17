@@ -2,7 +2,6 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import React from 'react';
 
 const PresentAbsentControl = ({ data }: any) => {
-  console.log(data);
   const will_come =
     data?.will_come === 1 ? true : data?.will_come === 0 ? false : null;
 
