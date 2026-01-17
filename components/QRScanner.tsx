@@ -11,8 +11,10 @@ import { Camera, CameraType } from 'react-native-camera-kit';
 import axios from 'axios';
 import ApplicationDetails from './ApplicationDetails';
 
+// const APIURL =
+  // 'https://admin.skillbridgebd.com/api/frontend/v1/application-barcode';
 const APIURL =
-  'https://admin.skillbridgebd.com/api/frontend/v1/application-barcode';
+  'http://192.168.100.208:8000/api/frontend/v1/application-barcode';
 
 const QRScanner = () => {
   const [scanning, setScanning] = useState(false);
