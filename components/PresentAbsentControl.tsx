@@ -3,7 +3,8 @@ import React from 'react';
 
 const PresentAbsentControl = ({ data }: any) => {
   console.log(data);
-  const will_come = data?.will_come === 1;
+  const will_come =
+    data?.will_come === 1 ? true : data?.will_come === 0 ? false : null;
 
   const handlePresent = () => {
     console.log('Present pressed', data);
@@ -37,26 +38,28 @@ const PresentAbsentControl = ({ data }: any) => {
     );
   }
 
-  // When present (1), show Present status and Absent button
+  // When present (1), show Present text and Absent button
   if (will_come) {
     return (
       <View style={styles.container}>
         <View style={styles.buttonContainer}>
           <View style={[styles.button, styles.presentStatus]}>
-            <Text style={styles.buttonText}>Present</Text>
+            <Text style={[styles.buttonText, styles.statusText]}>
+              Present Selected
+            </Text>
           </View>
           <TouchableOpacity
             style={[styles.button, styles.absentButton]}
             onPress={handleAbsent}
           >
-            <Text style={styles.buttonText}>Absent</Text>
+            <Text style={styles.buttonText}>Mark Absent</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
   }
 
-  // When absent (0), show Present button and Absent status
+  // When absent (0), show Present button and Absent text
   return (
     <View style={styles.container}>
       <View style={styles.buttonContainer}>
@@ -64,10 +67,12 @@ const PresentAbsentControl = ({ data }: any) => {
           style={[styles.button, styles.presentButton]}
           onPress={handlePresent}
         >
-          <Text style={styles.buttonText}>Present</Text>
+          <Text style={styles.buttonText}>Mark Present</Text>
         </TouchableOpacity>
         <View style={[styles.button, styles.absentStatus]}>
-          <Text style={styles.buttonText}>Absent</Text>
+          <Text style={[styles.buttonText, styles.statusText]}>
+            Absent Selected
+          </Text>
         </View>
       </View>
     </View>
@@ -82,31 +87,41 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     width: '100%',
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
   button: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 50,
   },
   presentButton: {
     backgroundColor: '#4CAF50',
-    opacity: 0.8,
   },
   absentButton: {
     backgroundColor: '#F44336',
-    opacity: 0.8,
   },
   presentStatus: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#E8F5E8',
+    borderRightWidth: 1,
+    borderRightColor: '#ddd',
   },
   absentStatus: {
-    backgroundColor: '#F44336',
+    backgroundColor: '#FFEBEE',
+    borderLeftWidth: 1,
+    borderLeftColor: '#ddd',
   },
   buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  statusText: {
+    color: '#333',
   },
 });
 
