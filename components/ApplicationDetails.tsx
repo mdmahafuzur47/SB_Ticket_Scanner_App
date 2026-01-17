@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import PrinterService from '../services/PrinterService';
+import PresentAbsentControl from './PresentAbsentControl';
 
 interface ApplicationDetailsProps {
   data: any;
@@ -70,12 +71,15 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
       await PrinterService.initPrinter();
 
       // Print in separate commands to avoid buffer issues
-      
+
       // Header
       await PrinterService.printText('\x1B\x61\x01', {}); // Center align
       await PrinterService.printText('================================\n', {});
       await PrinterService.printText('INTERVIEW TICKET\n', {});
-      await PrinterService.printText('================================\n\n', {});
+      await PrinterService.printText(
+        '================================\n\n',
+        {},
+      );
 
       // Job Position
       await PrinterService.printText('\x1B\x61\x00', {}); // Left align
@@ -107,6 +111,8 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
     }
   };
 
+  console.log(data);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -117,6 +123,9 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Present/Absent Control Component */}
+        <PresentAbsentControl data={data?.schedule} />
+
         {/* Application Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Application Information</Text>
@@ -512,7 +521,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: '#fff',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
     elevation: 10,
@@ -525,7 +534,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   connectedText: {
-    fontSize: 14,
+    fontSize: 10,
     color: '#4CAF50',
     fontWeight: '600',
     textAlign: 'center',
@@ -547,7 +556,7 @@ const styles = StyleSheet.create({
   },
   printButton: {
     backgroundColor: '#2196F3',
-    paddingVertical: 16,
+    paddingVertical: 10,
     borderRadius: 10,
     alignItems: 'center',
     elevation: 3,
