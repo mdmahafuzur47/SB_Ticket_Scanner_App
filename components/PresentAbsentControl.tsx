@@ -22,7 +22,7 @@ const PresentAbsentControl = ({ application_id, data, onUpdate }: any) => {
     setAttendanceStatus(
       data?.attendance === 1 ? true : data?.attendance === 0 ? false : null,
     );
-  }, [data?.attendance]);
+  }, [data]);
 
   const handlePresent = async () => {
     if (loading) return; // Prevent multiple clicks
