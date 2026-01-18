@@ -1,36 +1,121 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import React from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
-const PresentAbsentControl = ({ data }: any) => {
-  const will_come =
-    data?.will_come === 1 ? true : data?.will_come === 0 ? false : null;
+// const ApiUrl = 'https://admin.skillbridgebd.com/api/admin/v1/applications';
+const ApiUrl = 'http://192.168.100.208:8000/api/admin/v1/applications';
 
-  const handlePresent = () => {
+const PresentAbsentControl = ({ application_id, data, onUpdate }: any) => {
+  const token = 'mafuzadmin2024token'; // Placeholder token
+  const [attendanceStatus, setAttendanceStatus] = useState(
+    data?.attendance === 1 ? true : data?.attendance === 0 ? false : null,
+  );
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setAttendanceStatus(
+      data?.attendance === 1 ? true : data?.attendance === 0 ? false : null,
+    );
+  }, [data?.attendance]);
+
+  const handlePresent = async () => {
+    if (loading) return; // Prevent multiple clicks
     console.log('Present pressed', data);
-    // TODO: Update attendance status to present (will_come = 1)
+    setAttendanceStatus(true); // Optimistic update
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        `${ApiUrl}/${application_id}/updateAttendanceByToken`,
+        {
+          schedule_id: data.schedule_id,
+          is_present: 1,
+          token: token,
+        },
+      );
+      console.log('Attendance updated to present:', response.data);
+      if (onUpdate) onUpdate();
+    } catch (error: any) {
+      console.error(
+        'Error updating attendance:',
+        error.response?.data?.message || error.message,
+      );
+      setAttendanceStatus(
+        data?.attendance === 1 ? true : data?.attendance === 0 ? false : null,
+      ); // Revert on error
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAbsent = () => {
+  const handleAbsent = async () => {
+    if (loading) return; // Prevent multiple clicks
     console.log('Absent pressed', data);
-    // TODO: Update attendance status to absent (will_come = 0)
+    setAttendanceStatus(false); // Optimistic update
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        `${ApiUrl}/${application_id}/updateAttendanceByToken`,
+        {
+          schedule_id: data.schedule_id,
+          is_present: 0,
+          token: token,
+        },
+      );
+      console.log('Attendance updated to absent:', response.data);
+      if (onUpdate) onUpdate();
+    } catch (error: any) {
+      console.error(
+        'Error updating attendance:',
+        error.response?.data?.message || error.message,
+      );
+      setAttendanceStatus(
+        data?.attendance === 1 ? true : data?.attendance === 0 ? false : null,
+      ); // Revert on error
+    } finally {
+      setLoading(false);
+    }
   };
 
   // When null, show both buttons
-  if (will_come === null) {
+  if (attendanceStatus === null) {
     return (
       <View style={styles.container}>
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.button, styles.presentButton]}
+            style={[
+              styles.button,
+              styles.presentButton,
+              loading && styles.disabledButton,
+            ]}
             onPress={handlePresent}
+            disabled={loading}
           >
-            <Text style={styles.buttonText}>Present</Text>
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Present</Text>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.button, styles.absentButton]}
+            style={[
+              styles.button,
+              styles.absentButton,
+              loading && styles.disabledButton,
+            ]}
             onPress={handleAbsent}
+            disabled={loading}
           >
-            <Text style={styles.buttonText}>Absent</Text>
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Absent</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -38,7 +123,7 @@ const PresentAbsentControl = ({ data }: any) => {
   }
 
   // When present (1), show Present text and Absent button
-  if (will_come) {
+  if (attendanceStatus) {
     return (
       <View style={styles.container}>
         <View style={styles.buttonContainer}>
@@ -48,10 +133,19 @@ const PresentAbsentControl = ({ data }: any) => {
             </Text>
           </View>
           <TouchableOpacity
-            style={[styles.button, styles.absentButton]}
+            style={[
+              styles.button,
+              styles.absentButton,
+              loading && styles.disabledButton,
+            ]}
             onPress={handleAbsent}
+            disabled={loading}
           >
-            <Text style={styles.buttonText}>Mark Absent</Text>
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Mark Absent</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -63,10 +157,19 @@ const PresentAbsentControl = ({ data }: any) => {
     <View style={styles.container}>
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={[styles.button, styles.presentButton]}
+          style={[
+            styles.button,
+            styles.presentButton,
+            loading && styles.disabledButton,
+          ]}
           onPress={handlePresent}
+          disabled={loading}
         >
-          <Text style={styles.buttonText}>Mark Present</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Mark Present</Text>
+          )}
         </TouchableOpacity>
         <View style={[styles.button, styles.absentStatus]}>
           <Text style={[styles.buttonText, styles.statusText]}>
@@ -103,6 +206,9 @@ const styles = StyleSheet.create({
   },
   absentButton: {
     backgroundColor: '#F44336',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   presentStatus: {
     backgroundColor: '#E8F5E8',

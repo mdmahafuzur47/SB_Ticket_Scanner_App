@@ -16,11 +16,15 @@ import PresentAbsentControl from './PresentAbsentControl';
 interface ApplicationDetailsProps {
   data: any;
   onClose: () => void;
+  onRefetch: (qrCode: string) => void;
+  scannedData: string;
 }
 
 const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
   data,
   onClose,
+  onRefetch,
+  scannedData,
 }) => {
   const [isPrinting, setIsPrinting] = useState(false);
   const [connectedDevice, setConnectedDevice] = useState<any>(null);
@@ -41,7 +45,9 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
     };
   }, []);
 
-  if (!data) return null;
+  const refetchData = () => {
+    onRefetch(scannedData);
+  };
 
   const formatDate = (dateString: string) => {
     return dateString || 'N/A';
@@ -111,8 +117,6 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
     }
   };
 
-  console.log(data);
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -124,7 +128,11 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Present/Absent Control Component */}
-        <PresentAbsentControl data={data?.schedule} />
+        <PresentAbsentControl
+          application_id={data.id}
+          data={data?.schedule}
+          onUpdate={refetchData}
+        />
 
         {/* Application Info */}
         <View style={styles.section}>

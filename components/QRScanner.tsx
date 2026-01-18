@@ -23,22 +23,15 @@ const QRScanner = () => {
   const [applicationData, setApplicationData] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
 
-  const onReadCode = async (event: any) => {
-    if (!scanning || loading) return;
-
-    const data = event.nativeEvent.codeStringValue;
-    console.log('QR Code Scanned:', data);
-
+  const fetchData = async (qrData: string) => {
     try {
       setLoading(true);
-      setScanning(false);
-
-      const res = await axios.get(`${APIURL}/${data}`);
+      const res = await axios.get(`${APIURL}/${qrData}`);
       console.log('Fetched Data:', res?.data?.data);
 
       if (res?.data?.data) {
         setApplicationData(res.data.data);
-        setScannedData(data);
+        setScannedData(qrData);
         setShowDetails(true);
       } else {
         Alert.alert('No Data', 'No application data found for this QR code.');
@@ -53,6 +46,16 @@ const QRScanner = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const onReadCode = async (event: any) => {
+    if (!scanning || loading) return;
+
+    const data = event.nativeEvent.codeStringValue;
+    console.log('QR Code Scanned:', data);
+
+    await fetchData(data);
+    setScanning(false);
   };
 
   const startScanning = () => {
@@ -70,7 +73,14 @@ const QRScanner = () => {
   };
 
   if (showDetails && applicationData) {
-    return <ApplicationDetails data={applicationData} onClose={closeDetails} />;
+    return (
+      <ApplicationDetails
+        data={applicationData}
+        onClose={closeDetails}
+        onRefetch={fetchData}
+        scannedData={scannedData}
+      />
+    );
   }
 
   return (
