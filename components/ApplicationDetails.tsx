@@ -56,7 +56,6 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
     return dateString || 'N/A';
   };
 
-
   const printTicket = async () => {
     // Check if printer is connected
     if (!PrinterService.isConnected()) {
@@ -77,14 +76,19 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
       const interviewTime = data.schedule?.schedule?.time_formatted || 'N/A';
       const jobApplicationSl = data?.job_application_sl || 'N/A';
       const applicationId = data?.application_id || 'N/A';
+      const nidNo = data.user?.nid_no || 'N/A';
+      const passportNo = data.user?.passport_no || 'N/A';
 
       // Initialize printer first
       await PrinterService.initPrinter();
       // Print in separate commands to avoid buffer issues
 
       // Header with decorative border
-      await PrinterService.printText('\x1B\x61\x01', {}); // Center align
-      await PrinterService.printText('**   INTERVIEW TICKET   **\n\n', {});
+      // await PrinterService.printText('\x1B\x61\x00', {}); // Left align
+      await PrinterService.printText(
+        `${interviewDate} - ${interviewTime}\n`,
+        {},
+      );
 
       // Serial Number (Bold and Large)
       await PrinterService.printText(`Serial Number: ${jobApplicationSl} \n`, {
@@ -94,41 +98,51 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
       await PrinterService.printText('--------------------------------\n', {});
 
       // Candidate & Job Details
-      // await PrinterService.printText('\x1B\x61\x00', {}); // Left align
-      await PrinterService.printText('Candidate Details:\n\n', {});
+      await PrinterService.printText(`${jobTitle}\n\n`, {
+        bold: true,
+        size: 2,
+      });
       await PrinterService.printText(`  Name: ${candidateName}\n`, {});
       await PrinterService.printText(`  Phone: ${phone}\n`, {});
-
-      await PrinterService.printText('Job Position:\n', {});
-      await PrinterService.printText(`  ${jobTitle}\n`, {});
-
-      await PrinterService.printText('Interview Schedule:\n', {});
-      await PrinterService.printText(`  Date: ${interviewDate}\n`, {});
-      await PrinterService.printText(`  Time: ${interviewTime}\n`, {});
+      passportNo !== 'N/A'
+        ? await PrinterService.printText(
+            `  Passport: ${
+              passportNo && passportNo !== 'N/A'
+                ? passportNo
+                : 'Not Available'
+            }\n`,
+            {},
+          )
+        : await PrinterService.printText(
+            `  NID No: ${
+              nidNo && nidNo !== 'N/A' ? nidNo : 'Not Available'
+            }\n`,
+            {},
+          );
 
       await PrinterService.printText('--------------------------------\n', {});
 
       // Barcode (Application ID) - Scannable
-      await PrinterService.printText('\x1B\x61\x01', {}); // Center align
-      
       // Set barcode height (default 162)
       await PrinterService.printText('\x1D\x68\x50', {}); // Height: 80 dots
-      
+
       // Set barcode width (2-6, default 3)
       await PrinterService.printText('\x1D\x77\x02', {}); // Width: 2
-      
+
       // Print barcode - CODE128 format
       const barcodeData = applicationId.toString();
       const barcodeLength = String.fromCharCode(barcodeData.length);
-      await PrinterService.printText(`\x1D\x6B\x49${barcodeLength}${barcodeData}`, {});
-      
+      await PrinterService.printText(
+        `\x1D\x6B\x49${barcodeLength}${barcodeData}`,
+        {},
+      );
+
       // Print ID below barcode
-      await PrinterService.printText(`\nID: ${applicationId}\n`, {});
+      // await PrinterService.printText(`\nID: ${applicationId}\n`, {});
 
       await PrinterService.printText('--------------------------------\n', {});
 
       // Evaluation Section
-      // await PrinterService.printText('\x1B\x61\x00', {}); // Left align
       await PrinterService.printText('Shortlisted | Rejected | Hold\n\n', {});
 
       await PrinterService.printText('Score: ___________\n', {});
