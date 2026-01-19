@@ -8,8 +8,8 @@ import {
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-// const ApiUrl = 'https://admin.skillbridgebd.com/api/admin/v1/applications';
-const ApiUrl = 'http://192.168.100.208:8000/api/admin/v1/applications';
+const ApiUrl = 'https://admin.skillbridgebd.com/api/admin/v1/applications';
+// const ApiUrl = 'http://192.168.100.208:8000/api/admin/v1/applications';
 
 const PresentAbsentControl = ({ application_id, data, onUpdate }: any) => {
   const token = 'mafuzadmin2024token'; // Placeholder token
