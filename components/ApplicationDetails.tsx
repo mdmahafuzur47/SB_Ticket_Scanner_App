@@ -69,7 +69,11 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
     setIsPrinting(true);
     try {
       // Get ticket data
-      const jobTitle = data.job?.title || 'N/A';
+      const jobTitleFull = data.job?.title || 'N/A';
+      const jobTitle = jobTitleFull.length > 14 ? jobTitleFull.substring(0, 14) + "." : jobTitleFull;
+      const companyNameFull = data.job?.client?.name || 'N/A';
+      const companyName = companyNameFull.length > 14 ? companyNameFull.substring(0, 14) + "." : companyNameFull;
+
       const candidateName = data.user?.full_name || 'N/A';
       const phone = data.user?.phone || 'N/A';
       const interviewDate = data.schedule?.schedule?.date_formatted || 'N/A';
@@ -98,7 +102,7 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
       await PrinterService.printText('--------------------------------\n', {});
 
       // Candidate & Job Details
-      await PrinterService.printText(`${jobTitle}\n\n`, {
+      await PrinterService.printText(`${jobTitle}(${companyName})\n\n`, {
         bold: true,
         size: 2,
       });
@@ -143,7 +147,7 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
       await PrinterService.printText('--------------------------------\n', {});
 
       // Evaluation Section
-      await PrinterService.printText('Shortlisted | Rejected | Hold\n\n', {});
+      await PrinterService.printText('Shortlisted | Rejected | Hold\n', {});
 
       await PrinterService.printText('Score: ___________\n', {});
 
