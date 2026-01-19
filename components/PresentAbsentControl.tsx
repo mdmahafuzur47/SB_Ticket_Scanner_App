@@ -126,15 +126,13 @@ const PresentAbsentControl = ({ application_id, data, onUpdate }: any) => {
   if (attendanceStatus) {
     return (
       <View style={styles.container}>
-        <View style={styles.buttonContainer}>
-          <View style={[styles.button, styles.presentStatus]}>
-            <Text style={[styles.buttonText, styles.statusText]}>
-              Present Selected
-            </Text>
+        <View style={styles.selectedContainer}>
+          <View style={styles.selectedBadge}>
+            <Text style={styles.selectedBadgeText1}>✓ Marked as Present</Text>
           </View>
           <TouchableOpacity
             style={[
-              styles.button,
+              styles.changeButton,
               styles.absentButton,
               loading && styles.disabledButton,
             ]}
@@ -155,10 +153,13 @@ const PresentAbsentControl = ({ application_id, data, onUpdate }: any) => {
   // When absent (0), show Present button and Absent text
   return (
     <View style={styles.container}>
-      <View style={styles.buttonContainer}>
+      <View style={styles.selectedContainer}>
+        <View style={[styles.selectedBadge]}>
+          <Text style={styles.selectedBadgeText}>✗ Marked as Absent</Text>
+        </View>
         <TouchableOpacity
           style={[
-            styles.button,
+            styles.changeButton,
             styles.presentButton,
             loading && styles.disabledButton,
           ]}
@@ -171,11 +172,6 @@ const PresentAbsentControl = ({ application_id, data, onUpdate }: any) => {
             <Text style={styles.buttonText}>Mark Present</Text>
           )}
         </TouchableOpacity>
-        <View style={[styles.button, styles.absentStatus]}>
-          <Text style={[styles.buttonText, styles.statusText]}>
-            Absent Selected
-          </Text>
-        </View>
       </View>
     </View>
   );
@@ -191,15 +187,17 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 8,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: '#ddd',
+    gap: 5,
   },
   button: {
     flex: 1,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 50,
+    minHeight: 35,
+    borderRadius: 6,
   },
   presentButton: {
     backgroundColor: '#4CAF50',
@@ -209,6 +207,35 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.6,
+  },
+  selectedContainer: {
+    flexDirection: 'column',
+    width: '100%',
+    gap: 12,
+  },
+  selectedBadge: {
+    alignItems: 'center',
+  },
+  selectedBadgeText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  selectedBadgeText1: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  changeButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   presentStatus: {
     backgroundColor: '#E8F5E8',
@@ -224,6 +251,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+    color: '#ffff',
   },
   statusText: {
     color: '#333',

@@ -12,6 +12,7 @@ import {
 
 import PrinterService from '../services/PrinterService';
 import PresentAbsentControl from './PresentAbsentControl';
+import PassportInformation from './parts/PassportInformation';
 
 interface ApplicationDetailsProps {
   data: any;
@@ -28,6 +29,8 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
 }) => {
   const [isPrinting, setIsPrinting] = useState(false);
   const [connectedDevice, setConnectedDevice] = useState<any>(null);
+
+  console.log(data);
 
   useEffect(() => {
     // Get initial connection status
@@ -53,6 +56,7 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
     return dateString || 'N/A';
   };
 
+
   const printTicket = async () => {
     // Check if printer is connected
     if (!PrinterService.isConnected()) {
@@ -69,44 +73,73 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
       const jobTitle = data.job?.title || 'N/A';
       const candidateName = data.user?.full_name || 'N/A';
       const phone = data.user?.phone || 'N/A';
-      const email = data.user?.email || 'N/A';
       const interviewDate = data.schedule?.schedule?.date_formatted || 'N/A';
       const interviewTime = data.schedule?.schedule?.time_formatted || 'N/A';
+      const jobApplicationSl = data?.job_application_sl || 'N/A';
+      const applicationId = data?.application_id || 'N/A';
 
       // Initialize printer first
       await PrinterService.initPrinter();
-
       // Print in separate commands to avoid buffer issues
 
-      // Header
+      // Header with decorative border
       await PrinterService.printText('\x1B\x61\x01', {}); // Center align
-      await PrinterService.printText('================================\n', {});
-      await PrinterService.printText('INTERVIEW TICKET\n', {});
+      await PrinterService.printText('**   INTERVIEW TICKET   **\n\n', {});
+
+      // Serial Number (Bold and Large)
+      await PrinterService.printText(`Serial Number: ${jobApplicationSl} \n`, {
+        bold: true,
+        size: 2,
+      });
+      await PrinterService.printText('--------------------------------\n', {});
+
+      // Candidate & Job Details
+      // await PrinterService.printText('\x1B\x61\x00', {}); // Left align
+      await PrinterService.printText('Candidate Details:\n\n', {});
+      await PrinterService.printText(`  Name: ${candidateName}\n`, {});
+      await PrinterService.printText(`  Phone: ${phone}\n`, {});
+
+      await PrinterService.printText('Job Position:\n', {});
+      await PrinterService.printText(`  ${jobTitle}\n`, {});
+
+      await PrinterService.printText('Interview Schedule:\n', {});
+      await PrinterService.printText(`  Date: ${interviewDate}\n`, {});
+      await PrinterService.printText(`  Time: ${interviewTime}\n`, {});
+
+      await PrinterService.printText('--------------------------------\n', {});
+
+      // Barcode (Application ID) - Scannable
+      await PrinterService.printText('\x1B\x61\x01', {}); // Center align
+      
+      // Set barcode height (default 162)
+      await PrinterService.printText('\x1D\x68\x50', {}); // Height: 80 dots
+      
+      // Set barcode width (2-6, default 3)
+      await PrinterService.printText('\x1D\x77\x02', {}); // Width: 2
+      
+      // Print barcode - CODE128 format
+      const barcodeData = applicationId.toString();
+      const barcodeLength = String.fromCharCode(barcodeData.length);
+      await PrinterService.printText(`\x1D\x6B\x49${barcodeLength}${barcodeData}`, {});
+      
+      // Print ID below barcode
+      await PrinterService.printText(`\nID: ${applicationId}\n`, {});
+
+      await PrinterService.printText('--------------------------------\n', {});
+
+      // Evaluation Section
+      // await PrinterService.printText('\x1B\x61\x00', {}); // Left align
+      await PrinterService.printText('Shortlisted | Rejected | Hold\n\n', {});
+
+      await PrinterService.printText('Score: ___________\n', {});
+
+      await PrinterService.printText('--------------------------------\n', {});
+
+      // Signature Section
       await PrinterService.printText(
-        '================================\n\n',
+        'Signature: _________________\n\n\n\n',
         {},
       );
-
-      // Job Position
-      await PrinterService.printText('\x1B\x61\x00', {}); // Left align
-      await PrinterService.printText('Job Position:\n', {});
-      await PrinterService.printText(`${jobTitle}\n\n`, {});
-
-      // Candidate Info
-      await PrinterService.printText('Candidate Name:\n', {});
-      await PrinterService.printText(`${candidateName}\n\n`, {});
-      await PrinterService.printText(`Phone: ${phone}\n`, {});
-      await PrinterService.printText(`Email: ${email}\n\n`, {});
-
-      // Interview Schedule
-      await PrinterService.printText('Interview Schedule:\n', {});
-      await PrinterService.printText(`Date: ${interviewDate}\n`, {});
-      await PrinterService.printText(`Time: ${interviewTime}\n\n`, {});
-
-      // Footer
-      await PrinterService.printText('\x1B\x61\x01', {}); // Center align
-      await PrinterService.printText('================================\n', {});
-      await PrinterService.printText('\n\n\n\n', {}); // Extra line feeds
 
       Alert.alert('Success', 'Ticket printed successfully!');
     } catch (error) {
@@ -138,6 +171,12 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Application Information</Text>
           <View style={styles.card}>
+            <View style={styles.serialNumberContainer}>
+              <Text style={styles.serialNumberLabel}>Serial Number</Text>
+              <Text style={styles.serialNumberValue}>
+                {data?.job_application_sl || 'N/A'}
+              </Text>
+            </View>
             <InfoRow label="Application ID" value={data.application_id} />
             <InfoRow label="Status" value={data.status} badge />
             <InfoRow label="Applied Date" value={formatDate(data.created_at)} />
@@ -184,6 +223,9 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
             </View>
           </View>
         )}
+
+        {/* passport information  */}
+        <PassportInformation data={data} />
 
         {/* Job Information */}
         {data.job && (
@@ -320,14 +362,14 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
         </View>
 
         {/* Interview Pass Link */}
-        {data.interview_pass_link && (
+        {/* {data.interview_pass_link && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Interview Pass</Text>
             <View style={styles.card}>
               <Text style={styles.linkText}>{data.interview_pass_link}</Text>
             </View>
           </View>
-        )}
+        )} */}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -371,7 +413,7 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
   );
 };
 
-const InfoRow = ({
+export const InfoRow = ({
   label,
   value,
   badge,
@@ -402,7 +444,7 @@ const InfoRow = ({
   );
 };
 
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
@@ -467,7 +509,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontWeight: '600',
-    flex: 1,
+    flex: 1 / 2,
   },
   value: {
     fontSize: 14,
@@ -503,6 +545,37 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     borderWidth: 3,
     borderColor: '#2196F3',
+  },
+  serialNumberContainer: {
+    backgroundColor: '#F5F9FF',
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#2196F3',
+    borderStyle: 'dashed',
+  },
+  serialNumberLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#666',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  serialNumberValue: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2196F3',
+    letterSpacing: 1,
+  },
+  passportImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#ddd',
   },
   linkText: {
     fontSize: 14,
