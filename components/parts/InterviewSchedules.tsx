@@ -87,12 +87,12 @@ const InterviewSchedules = ({ data }: any) => {
 
             {/* Contact & Attendance */}
             <View style={styles.detailsRow}>
-              <View style={styles.detailItem}>
+              {/* <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Contact</Text>
                 <Text style={styles.detailValue}>
                   {schedule.contact_number || 'N/A'}
                 </Text>
-              </View>
+              </View> */}
               {assign && (
                 <>
                   <View style={styles.detailItem}>
@@ -152,14 +152,14 @@ const InterviewSchedules = ({ data }: any) => {
             )}
 
             {/* WhatsApp Group Link */}
-            {schedule.whats_app_group_link && (
+            {/* {schedule.whats_app_group_link && (
               <View style={styles.linkContainer}>
                 <Text style={styles.linkLabel}>💬 WhatsApp Group:</Text>
                 <Text style={styles.linkText} numberOfLines={1}>
                   {schedule.whats_app_group_link}
                 </Text>
               </View>
-            )}
+            )} */}
           </View>
         );
       })}
