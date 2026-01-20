@@ -13,6 +13,7 @@ import {
 import PrinterService from '../services/PrinterService';
 import PresentAbsentControl from './PresentAbsentControl';
 import PassportInformation from './parts/PassportInformation';
+import InterviewSchedules from './parts/InterviewSchedules';
 
 interface ApplicationDetailsProps {
   data: any;
@@ -70,9 +71,15 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
     try {
       // Get ticket data
       const jobTitleFull = data.job?.title || 'N/A';
-      const jobTitle = jobTitleFull.length > 14 ? jobTitleFull.substring(0, 14) + "." : jobTitleFull;
+      const jobTitle =
+        jobTitleFull.length > 14
+          ? jobTitleFull.substring(0, 14) + '.'
+          : jobTitleFull;
       const companyNameFull = data.job?.client?.name || 'N/A';
-      const companyName = companyNameFull.length > 14 ? companyNameFull.substring(0, 14) + "." : companyNameFull;
+      const companyName =
+        companyNameFull.length > 14
+          ? companyNameFull.substring(0, 14) + '.'
+          : companyNameFull;
 
       const candidateName = data.user?.full_name || 'N/A';
       const phone = data.user?.phone || 'N/A';
@@ -111,16 +118,12 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
       passportNo !== 'N/A'
         ? await PrinterService.printText(
             `  Passport: ${
-              passportNo && passportNo !== 'N/A'
-                ? passportNo
-                : 'Not Available'
+              passportNo && passportNo !== 'N/A' ? passportNo : 'Not Available'
             }\n`,
             {},
           )
         : await PrinterService.printText(
-            `  NID No: ${
-              nidNo && nidNo !== 'N/A' ? nidNo : 'Not Available'
-            }\n`,
+            `  NID No: ${nidNo && nidNo !== 'N/A' ? nidNo : 'Not Available'}\n`,
             {},
           );
 
@@ -167,6 +170,8 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
       setIsPrinting(false);
     }
   };
+
+  console.log(data);
 
   return (
     <View style={styles.container}>
@@ -340,7 +345,7 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
               )}
               <InfoRow
                 label="Attendance"
-                value={data.schedule.attendance || 'Not Marked'}
+                value={data.schedule.attendance ? 'Present' : 'Absent'}
               />
               <InfoRow
                 label="Will Come"
@@ -356,38 +361,8 @@ const ApplicationDetails: React.FC<ApplicationDetailsProps> = ({
           </View>
         )}
 
-        {/* Interview Stages */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Interview Progress</Text>
-          <View style={styles.card}>
-            <InfoRow
-              label="Face to Face 1"
-              value={data.ftf_one ? '✓ Passed' : '✗ Not Passed'}
-            />
-            <InfoRow
-              label="Face to Face 2"
-              value={data.ftf_two ? '✓ Passed' : '✗ Not Passed'}
-            />
-            <InfoRow
-              label="Online Test"
-              value={data.online_test ? '✓ Completed' : '✗ Not Completed'}
-            />
-            <InfoRow
-              label="Score"
-              value={data.schedule?.score || 'Not Graded'}
-            />
-          </View>
-        </View>
-
-        {/* Interview Pass Link */}
-        {/* {data.interview_pass_link && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Interview Pass</Text>
-            <View style={styles.card}>
-              <Text style={styles.linkText}>{data.interview_pass_link}</Text>
-            </View>
-          </View>
-        )} */}
+        {/* Interview schedules */}
+       <InterviewSchedules data={data?.job?.schedules} />
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -671,6 +646,52 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  progressSideBySideContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  statusSection: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scoreSection: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  divider: {
+    width: 1,
+    height: 60,
+    backgroundColor: '#e0e0e0',
+    marginHorizontal: 16,
+  },
+  statusLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  statusValue: {
+    fontSize: 18,
+    color: '#4CAF50',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  scoreValue: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2196F3',
+    textAlign: 'center',
+  },
+  scoreNotProvided: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 });
 
