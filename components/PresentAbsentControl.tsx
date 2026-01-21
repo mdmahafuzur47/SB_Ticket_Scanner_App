@@ -7,12 +7,12 @@ import {
 } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { token, Url } from '../config/env';
 
 // const ApiUrl = 'https://admin.skillbridgebd.com/api/admin/v1/applications';
-const ApiUrl = 'http://192.168.100.208:8000/api/admin/v1/applications';
+const ApiUrl = `${Url}/admin/v1/applications`;
 
 const PresentAbsentControl = ({ application_id, data, onUpdate }: any) => {
-  const token = 'mafuzadmin2024token'; // Placeholder token
   const [attendanceStatus, setAttendanceStatus] = useState(
     data?.attendance === 1 ? true : data?.attendance === 0 ? false : null,
   );

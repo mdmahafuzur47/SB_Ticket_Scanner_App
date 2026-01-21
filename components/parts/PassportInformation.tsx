@@ -17,7 +17,28 @@ const PassportInformation: any = ({ data }: any) => {
     setShowCamera(false);
   };
 
-  console.log('showCamera state:', showCamera);
+  const handlePassportCaptured = async () => {
+    try {
+      if (PassportInformation.cameraRef) {
+        const image = await PassportInformation.cameraRef.capture();
+        console.log('Captured Passport Image:', image);
+        console.log('Image URI:', image.uri);
+
+        setCapturedImage(image.uri);
+        setShowCamera(false);
+
+        // Log as a file object-like structure
+        const imageFile = {
+          uri: image.uri,
+          type: 'image/jpeg',
+          name: `passport_${Date.now()}.jpg`,
+        };
+        console.log('Image File Object:', imageFile);
+      }
+    } catch (error) {
+      console.error('Error capturing image:', error);
+    }
+  };
 
   if (showCamera) {
     console.log('Rendering camera view...');
@@ -48,31 +69,7 @@ const PassportInformation: any = ({ data }: any) => {
         </View>
 
         <View style={localStyles.cameraFooter}>
-          <TouchableOpacity
-            style={localStyles.captureButtonWrapper}
-            onPress={async () => {
-              try {
-                if (PassportInformation.cameraRef) {
-                  const image = await PassportInformation.cameraRef.capture();
-                  console.log('Captured Passport Image:', image);
-                  console.log('Image URI:', image.uri);
-
-                  setCapturedImage(image.uri);
-                  setShowCamera(false);
-
-                  // Log as a file object-like structure
-                  const imageFile = {
-                    uri: image.uri,
-                    type: 'image/jpeg',
-                    name: `passport_${Date.now()}.jpg`,
-                  };
-                  console.log('Image File Object:', imageFile);
-                }
-              } catch (error) {
-                console.error('Error capturing image:', error);
-              }
-            }}
-          >
+          <TouchableOpacity style={localStyles.captureButtonWrapper} onPress={handlePassportCaptured}>
             <View style={localStyles.captureButton}>
               <Text style={localStyles.captureButtonText}>📷</Text>
             </View>
