@@ -9,7 +9,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { token, Url } from '../config/env';
 
-// const ApiUrl = 'https://admin.skillbridgebd.com/api/admin/v1/applications';
 const ApiUrl = `${Url}/admin/v1/applications`;
 
 const PresentAbsentControl = ({ application_id, data, onUpdate }: any) => {
