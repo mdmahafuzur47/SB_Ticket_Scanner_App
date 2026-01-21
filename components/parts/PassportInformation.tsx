@@ -1,11 +1,25 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import React, { useState } from 'react';
 import { Camera, CameraType } from 'react-native-camera-kit';
 import { InfoRow, styles } from '../ApplicationDetails';
+import { token, Url } from '../../config/env';
+import axios from 'axios';
+
+const ApiUrl = `${Url}/frontend/v1/upload-passport-photo`;
 
 const PassportInformation: any = ({ data }: any) => {
   const [showCamera, setShowCamera] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [capturing, setCapturing] = useState(false);
 
   const handleOpenCamera = () => {
     console.log('Opening camera...');
@@ -19,6 +33,7 @@ const PassportInformation: any = ({ data }: any) => {
 
   const handlePassportCaptured = async () => {
     try {
+      setCapturing(true);
       if (PassportInformation.cameraRef) {
         const image = await PassportInformation.cameraRef.capture();
         console.log('Captured Passport Image:', image);
@@ -26,17 +41,46 @@ const PassportInformation: any = ({ data }: any) => {
 
         setCapturedImage(image.uri);
         setShowCamera(false);
+        setCapturing(false);
 
-        // Log as a file object-like structure
-        const imageFile = {
-          uri: image.uri,
-          type: 'image/jpeg',
-          name: `passport_${Date.now()}.jpg`,
-        };
-        console.log('Image File Object:', imageFile);
+        // Upload the captured image
+        await uploadPassportPhoto(image.uri);
       }
     } catch (error) {
       console.error('Error capturing image:', error);
+      setCapturing(false);
+      Alert.alert('Error', 'Failed to capture passport photo');
+    }
+  };
+
+  const uploadPassportPhoto = async (imageUri: string) => {
+    try {
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append('passport_copy', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: `passport_${Date.now()}.jpg`,
+      } as any);
+      formData.append('user_id', data?.user?.id?.toString() || '');
+      formData.append('token', token);
+
+      const response = await axios.post(ApiUrl, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      console.log('Upload response:', response.data);
+      Alert.alert('Success', 'Passport photo uploaded successfully!');
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      const errorMessage =
+        error.response?.data?.message || 'Failed to upload passport photo';
+      Alert.alert('Upload Failed', errorMessage);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -69,14 +113,23 @@ const PassportInformation: any = ({ data }: any) => {
         </View>
 
         <View style={localStyles.cameraFooter}>
-          <TouchableOpacity style={localStyles.captureButtonWrapper} onPress={handlePassportCaptured}>
-            <View style={localStyles.captureButton}>
-              <Text style={localStyles.captureButtonText}>📷</Text>
+          <TouchableOpacity
+            style={localStyles.captureButtonWrapper}
+            onPress={handlePassportCaptured}
+            disabled={capturing}
+          >
+            <View style={[localStyles.captureButton, capturing && localStyles.captureButtonDisabled]}>
+              {capturing ? (
+                <ActivityIndicator size="small" color="#2196F3" />
+              ) : (
+                <Text style={localStyles.captureButtonText}>📷</Text>
+              )}
             </View>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleCloseCamera}
             style={localStyles.cancelButton}
+            disabled={capturing}
           >
             <Text style={localStyles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
@@ -109,13 +162,30 @@ const PassportInformation: any = ({ data }: any) => {
             />
 
             <TouchableOpacity
-              style={localStyles.uploadButton}
+              style={[
+                localStyles.uploadButton,
+                uploading && localStyles.uploadButtonDisabled,
+              ]}
               onPress={handleOpenCamera}
+              disabled={uploading}
             >
-              <Text style={localStyles.uploadButtonText}>
-                📷 {capturedImage ? 'Retake' : 'Upload'} Passport Photo
-              </Text>
+              {uploading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={localStyles.uploadButtonText}>
+                  📷 {capturedImage ? 'Retake' : 'Upload'} Passport Photo
+                </Text>
+              )}
             </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {uploading && (
+        <View style={localStyles.loadingOverlay}>
+          <View style={localStyles.loadingContainer}>
+            <ActivityIndicator size="large" color="#2196F3" />
+            <Text style={localStyles.loadingText}>Uploading Passport...</Text>
           </View>
         </View>
       )}
@@ -186,6 +256,9 @@ const localStyles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#2196F3',
   },
+  captureButtonDisabled: {
+    opacity: 0.5,
+  },
   cameraFooter: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     padding: 10,
@@ -216,9 +289,36 @@ const localStyles = StyleSheet.create({
     marginTop: 16,
     alignItems: 'center',
   },
+  uploadButtonDisabled: {
+    backgroundColor: '#90CAF9',
+  },
   uploadButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10000,
+  },
+  loadingContainer: {
+    backgroundColor: '#fff',
+    padding: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    minWidth: 200,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#333',
     fontWeight: '600',
   },
 });
